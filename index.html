@@ -55,6 +55,17 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 #rain{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:40}
 #rain img{position:absolute;top:-60px;image-rendering:pixelated;animation:fall linear forwards}
 @keyframes fall{0%{transform:translate(0,0) rotate(-8deg)}50%{transform:translate(var(--sw),55vh) rotate(8deg)}100%{transform:translate(0,115vh) rotate(-8deg)}}
+.hp{display:flex;justify-content:center;gap:4px;margin-top:1.4rem}
+.hp img{width:20px;height:20px;image-rendering:pixelated}
+#hpmsg{min-height:1.4rem;margin-top:.6rem;color:var(--soft);font-size:.95rem}
+.pick output.pop{animation:pop .45s ease-out}
+@keyframes pop{from{opacity:0;transform:scale(.94)}}
+#rain img.b{animation:rise .9s ease-out forwards}
+@keyframes rise{from{transform:translate(0,0) scale(1);opacity:1}to{transform:translate(var(--dx),-70px) scale(.6);opacity:0}}
+.rv{opacity:0}
+.rv.in{animation:reveal 1s cubic-bezier(.2,.7,.2,1) both;animation-delay:var(--d,0s)}
+@keyframes reveal{from{opacity:0;transform:translateY(44px) scale(.96)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.rv{opacity:1}.rv.in{animation:none}}
 .end{text-align:center;margin-top:4rem}
 .end h2{font-size:clamp(1.8rem,6vw,3rem)}
 .end p{color:var(--soft);margin-top:1rem}
@@ -93,6 +104,8 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
   <section class="pick" aria-live="polite">
     <output id="c">Нажми на кнопку</output>
     <button id="b" type="button">Получить комплимент</button>
+    <div class="hp" id="hp" aria-hidden="true"></div>
+    <div id="hpmsg"></div>
   </section>
 
   <section class="song">
@@ -134,7 +147,7 @@ let i=-1;
 const c=document.getElementById("c");
 document.getElementById("b").addEventListener("click",()=>{
   let n;do{n=Math.floor(Math.random()*list.length)}while(n===i);
-  i=n;c.textContent=list[n];document.getElementById("b").textContent="Ещё комплимент";
+  i=n;c.textContent=list[n];c.classList.remove("pop");void c.offsetWidth;c.classList.add("pop");const bt=document.getElementById("b");bt.textContent="Ещё комплимент";const br=bt.getBoundingClientRect();burst(br.left+br.width/2,br.top,8);fillHeart();
 });
 
 const aud=document.getElementById("aud"),pb=document.getElementById("play"),ico=document.getElementById("ico"),fill=document.getElementById("fill");
@@ -160,7 +173,7 @@ function drop(){
 }
 function tryCode(){
   if(code.value.trim().toLowerCase()===atob("bmFzdGVuYQ==")){
-    gate.remove();site.hidden=false;window.scrollTo(0,0);
+    gate.remove();site.hidden=false;window.scrollTo(0,0);reveal();
     document.querySelectorAll("video").forEach(v=>v.play().catch(()=>{}));
     for(let k=0;k<14;k++)setTimeout(drop,k*120);
     setInterval(drop,matchMedia("(prefers-reduced-motion: reduce)").matches?1200:380);
@@ -168,6 +181,31 @@ function tryCode(){
 }
 document.getElementById("enter").addEventListener("click",tryCode);
 code.addEventListener("keydown",e=>{if(e.key==="Enter")tryCode();});
+
+const hp=document.getElementById("hp"),hpmsg=document.getElementById("hpmsg"),calm=matchMedia("(prefers-reduced-motion: reduce)").matches;
+function mkURL(col){let r="";P.forEach((row,y)=>[...row].forEach((ch,x)=>{if(col[ch])r+='<rect x="'+x+'" y="'+y+'" width="1" height="1" fill="'+col[ch]+'"/>';}));return "data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 9" shape-rendering="crispEdges">'+r+'</svg>');}
+const emptyURL=mkURL({K:"#3b0a0f",R:"#6b4650",W:"#8a6a74",D:"#523540"});
+let got=0;
+function hpDraw(){hp.textContent="";for(let k=0;k<10;k++){const im=document.createElement("img");im.alt="";im.src=k<got?heartURL:emptyURL;hp.appendChild(im);}}
+function fillHeart(){if(got<10){got++;hpDraw();if(got===10)hpmsg.textContent="Все сердечки собраны, здоровье полное)";}}
+function burst(x,y,n){if(calm)return;for(let k=0;k<n;k++){const h=document.createElement("img");h.src=heartURL;h.alt="";h.className="b";const s=10+Math.random()*10;h.style.cssText="left:"+(x-s/2)+"px;top:"+(y-s/2)+"px;width:"+s+"px;height:"+s+"px;--dx:"+(Math.random()*90-45)+"px";h.addEventListener("animationend",()=>h.remove());rain.appendChild(h);}}
+hpDraw();
+document.addEventListener("pointerdown",e=>{if(site.hidden||e.target.closest("button,input,video"))return;burst(e.clientX,e.clientY,5);});
+const rvEls=[...document.querySelectorAll(".photos,.words p,.pick,.song,.end p")];
+rvEls.forEach(el=>el.classList.add("rv"));
+document.querySelectorAll(".words p").forEach((p,k)=>p.style.setProperty("--d",(k*0.2)+"s"));
+function reveal(){
+  if(site.hidden)return;
+  const vh=window.innerHeight;
+  rvEls.forEach(el=>{
+    if(el.classList.contains("in"))return;
+    const r=el.getBoundingClientRect();
+    if(r.top<vh*0.92&&r.bottom>0)el.classList.add("in");
+  });
+}
+addEventListener("scroll",reveal,{passive:true});
+addEventListener("resize",reveal);
+setInterval(reveal,400);
 </script>
 </body>
 </html>
